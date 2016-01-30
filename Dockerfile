@@ -7,15 +7,38 @@ MAINTAINER Marc Wäckerlin
 WORKDIR /tmp/install
 ADD icaclient_*.deb icaclient.deb
 RUN dpkg --add-architecture i386
-RUN apt-get -y update
-RUN apt-get -y install firefox openssh-server
-RUN dpkg -i icaclient.deb || apt-get -y -f install
+
+# Need firefox and icaclient.deb for launch and use Citrix
+# To provide the required certs, install openssl (to provide c_rehash) and
+# ca-certificates.
+# Xnest is used to protect the host X server from potential crashes caused by
+# whatever wfica sends out, and also to avoid wfica's attempted use of MIT_SHM
+# shared memory X protocol, which we don't have working from within the
+# container.
+# strace required to avoid Xnest crash (see xnest-wfica.sh)
+# xclip may help users bridge the X clipboard from host to Xnest.
+RUN apt-get -y update && apt-get -y install \
+  ca-certificates \
+  openssl \
+  firefox \
+  Xnest \
+  xclip \
+  strace \
+  && ( dpkg -i icaclient.deb || apt-get -y -f install ) \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
+RUN rm /tmp/install/icaclient.deb
+
 RUN ln -s /usr/share/ca-certificates/mozilla/* /opt/Citrix/ICAClient/keystore/cacerts/
 RUN c_rehash /opt/Citrix/ICAClient/keystore/cacerts/
 RUN rm -f /usr/lib/mozilla/plugins/npwrapper.npica.so \
           /usr/lib/firefox/plugins/npwrapper.npica.so \
           /usr/lib/mozilla/plugins/npica.so
 RUN ln -s /opt/Citrix/ICAClient/npica.so /usr/lib/firefox-addons/plugins/npica.so
+
+# Have icaclient open in a Xnest window
+RUN mv /opt/Citrix/ICAClient/wfica /opt/Citrix/ICAClient/wfica.orig
+ADD xnest-wfica.sh /opt/Citrix/ICAClient/wfica
 
 RUN useradd -m browser
 USER browser
