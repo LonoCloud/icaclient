@@ -40,12 +40,16 @@ RUN ln -s /opt/Citrix/ICAClient/npica.so /usr/lib/firefox-addons/plugins/npica.s
 RUN mv /opt/Citrix/ICAClient/wfica /opt/Citrix/ICAClient/wfica.orig
 ADD xnest-wfica.sh /opt/Citrix/ICAClient/wfica
 
+# Set browser plugin to "Always Activate"
+RUN echo 'pref("plugin.state.npica", 2);' \
+    > /usr/lib/firefox/defaults/pref/icaclient.js
+
 RUN useradd -m browser
 USER browser
 WORKDIR /home/browser
 
+# Add icaclient config
 RUN mkdir .ICAClient
 ADD wfclient.ini .ICAClient/wfclient.ini
 
-USER browser
 CMD firefox --new-instance
