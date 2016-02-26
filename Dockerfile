@@ -2,10 +2,11 @@
 # docker run --rm --name icaclient -v /tmp/.X11-unix:/tmp/.X11-unix -e DISPLAY="$DISPLAY" icaclient
 # then open about:addons in firefox and set ica-client to "allways activate"
 FROM ubuntu:latest
-MAINTAINER Marc Wäckerlin
+# MAINTAINER Marc Wäckerlin
+MAINTAINER Chouser <chouser@lonocloud.com>
 
 WORKDIR /tmp/install
-ADD icaclient_*.deb icaclient.deb
+COPY icaclient_*.deb icaclient.deb
 RUN dpkg --add-architecture i386
 
 # Need firefox and icaclient.deb for launch and use Citrix
@@ -22,8 +23,8 @@ RUN apt-get -y update && apt-get -y install \
   openssl \
   firefox \
   Xnest \
+  x11-xserver-utils \
   xclip \
-  strace \
   && ( dpkg -i icaclient.deb || apt-get -y -f install ) \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
@@ -38,7 +39,7 @@ RUN ln -s /opt/Citrix/ICAClient/npica.so /usr/lib/firefox-addons/plugins/npica.s
 
 # Have icaclient open in a Xnest window
 RUN mv /opt/Citrix/ICAClient/wfica /opt/Citrix/ICAClient/wfica.orig
-ADD xnest-wfica.sh /opt/Citrix/ICAClient/wfica
+COPY xnest-wfica.sh /opt/Citrix/ICAClient/wfica
 
 # Set browser plugin to "Always Activate"
 RUN echo 'pref("plugin.state.npica", 2);' \
@@ -50,6 +51,7 @@ WORKDIR /home/browser
 
 # Add icaclient config
 RUN mkdir .ICAClient
-ADD wfclient.ini .ICAClient/wfclient.ini
+COPY wfclient.ini .ICAClient/wfclient.ini
 
-CMD firefox --new-instance
+COPY main.sh /home/browser/main.sh
+CMD /home/browser/main.sh
